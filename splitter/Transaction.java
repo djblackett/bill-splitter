@@ -53,6 +53,14 @@ public class Transaction {
         this.amount = amount;
     }
 
-
-
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "date=" + date +
+                ", person1=" + person1 +
+                ", person2=" + person2 +
+                ", transactionType='" + transactionType + '\'' +
+                ", amount=" + amount +
+                '}';
+    }
 }

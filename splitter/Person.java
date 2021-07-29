@@ -43,10 +43,10 @@ public class Person {
         this.transactions = transactions;
     }
 
-    @Override
-    public String toString() {
-        return "Person{" +
-                "name='" + name + '\'' +
-                '}';
-    }
+//    @Override
+//    public String toString() {
+//        return "Person{" +
+//                "name='" + name + '\'' +
+//                '}';
+//    }
 }
