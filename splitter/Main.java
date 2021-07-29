@@ -3,9 +3,14 @@ package splitter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /*
@@ -20,14 +25,14 @@ import java.util.stream.Collectors;
 public class Main {
     static BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
     static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-    static List<String> commandList = new ArrayList<>(Arrays.asList("balance", "borrow", "exit", "help", "repay"));
+    static List<String> commandList = new ArrayList<>(Arrays.asList("balance", "borrow", "exit", "help", "repay", "group", "purchase"));
 
 
     public static void main(String[] args) throws IOException {
         Map<String, Person> personMap = new HashMap<>();
         List<Transaction> transactionList = new ArrayList<>();
         Set<FriendPairBalance> friendPairBalances = new HashSet<>();
-
+        Map<String, Group> groupMap = new HashMap<>();
 
         while (true) {
 
@@ -38,7 +43,9 @@ public class Main {
                 print("balance\n" +
                         "borrow\n" +
                         "exit\n" +
+                        "group\n" +
                         "help\n" +
+                        "purchase\n" +
                         "repay");
                 continue;
             }
@@ -63,14 +70,9 @@ public class Main {
 
                 //show balance for each person
                 boolean isOpen = splitLine.length > commandIndex + 1 && splitLine[commandIndex + 1].equals("open");
-                LocalDate date;
 
                 // Check if date arg was given
-                if (isFirstArgumentDate(splitLine)) {
-                    date = LocalDate.parse(splitLine[0], dateTimeFormatter);
-                } else {
-                    date = LocalDate.now();
-                }
+                LocalDate date = getDateFromArgOrDefault(splitLine);
 
                 LocalDate targetDate;
                 List<Transaction> balancePeriodTransactionList;
@@ -104,9 +106,9 @@ public class Main {
                     if (t.getTransactionType().equals("borrow")) {
 
                         if (person1 == pair.getPerson1()) {
-                            pair.setBalance(pair.getBalance() + Math.abs(t.getAmount()));
+                            pair.setBalance(pair.getBalance().add(t.getAmount().abs()));
                         } else {
-                            pair.setBalance(pair.getBalance() - Math.abs(t.getAmount()));
+                            pair.setBalance(pair.getBalance().subtract(t.getAmount().abs()));
                         }
 
                     }
@@ -114,15 +116,15 @@ public class Main {
                     if (t.getTransactionType().equals("repay")) {
 
                         if (person1 == pair.getPerson1()) {
-                            pair.setBalance(pair.getBalance() - t.getAmount());
+                            pair.setBalance(pair.getBalance().subtract(t.getAmount()));
                         } else {
-                            pair.setBalance(pair.getBalance() + t.getAmount());
+                            pair.setBalance(pair.getBalance().add(t.getAmount()));
                         }
                     }
                 }
 
                 // Filter list so only pairs of friends with outstanding balances remain
-                List<FriendPairBalance> results = friendPairBalances.stream().filter(pair -> pair.getBalance() != 0).collect(Collectors.toList());
+                List<FriendPairBalance> results = friendPairBalances.stream().filter(pair -> pair.getBalance().intValue() != 0).collect(Collectors.toList());
                 FriendPairBalance result;
 
                 // Check if everyone is up to date with payments
@@ -142,19 +144,19 @@ public class Main {
                 for (int i = 0; i < results.size(); i++) {
 
                     // Determine who owes whom the balance
-                    if (results.get(i).getBalance() > 0) {
+                    if (results.get(i).getBalance().intValue() > 0) {
                         result = results.get(i);
-                        printList.add(result.getPerson1().getName() + " owes " + result.getPerson2().getName() + " " + Math.abs(result.getBalance()));
+                        printList.add(result.getPerson1().getName() + " owes " + result.getPerson2().getName() + " " + result.getBalance().abs().toString());
                     } else {
                         result = results.get(i);
-                        printList.add(result.getPerson2().getName() + " owes " + result.getPerson1().getName() + " " + Math.abs(result.getBalance()));
+                        printList.add(result.getPerson2().getName() + " owes " + result.getPerson1().getName() + " " + result.getBalance().abs());
                     }
                 }
 
                 // Print final balances
                 // Reset friend pair balances (transactions are unaffected)
                 printList.forEach(System.out::println);
-                results.forEach(pair -> pair.setBalance(0));
+                results.forEach(pair -> pair.setBalance(new BigDecimal(0)));
 
                 continue;
             }
@@ -172,7 +174,11 @@ public class Main {
                 // repay money
                 String person1 = splitLine[commandIndex + 1];
                 String person2 = splitLine[commandIndex + 2];
-                int amount = Integer.parseInt(splitLine[commandIndex + 3]);
+                String amountString = splitLine[commandIndex + 3];
+                if (!amountString.contains(".")) {
+                    amountString = amountString.concat(".00");
+                }
+                BigDecimal amount = new BigDecimal(amountString);
 
                 // Create person objects if not yet instantiated
                 if (!personMap.containsKey(person1)) {
@@ -204,7 +210,87 @@ public class Main {
                     print("Illegal command arguments");
                 }
             }
+
+            if (splitLine[0].equals("group")) {
+
+
+                if (splitLine[1].equals("create")) {
+                    commandIndex = Arrays.asList(splitLine).indexOf("create");
+                    String groupName = splitLine[commandIndex + 1];
+                    //System.out.println(groupName);
+
+                    if (groupName.matches("[A-Z]+")) {
+                        String[] splitInputForGroup = input.split(" \\(");
+                        String friends = splitInputForGroup[1];
+                        friends = friends.substring(0, friends.length() - 1);
+                        String[] friendArray = friends.split(", ");
+                        List<Person> groupPersonList = Arrays.stream(friendArray).map(Person::new).collect(Collectors.toList());
+                        Group group = createGroup(groupPersonList);
+                        groupMap.put(groupName, group);
+
+
+                        for (Person p :group.getGroupMembers()) {
+                            if (!personMap.containsValue(p)) {
+                                personMap.put(p.getName(), p);
+                            }
+                        }
+
+                    } else {
+                        print("Illegal command arguments");
+                    }
+                    continue;
+                }
+
+                if (splitLine[1].equals("show")) {
+                    String groupName = splitLine[2];
+                    if (groupMap.containsKey(groupName)) {
+                        Group group = groupMap.get(groupName);
+                        group.show();
+                    } else {
+                        print("Unknown group");
+                    }
+                    continue;
+                }
+            }
+
+            if (command.equals("purchase")) {
+
+                //todo check date arg
+
+                String buyerName = splitLine[commandIndex + 1];
+                String itemBought = splitLine[commandIndex + 2];
+                BigDecimal amount = new BigDecimal(splitLine[commandIndex + 3]);
+                String groupName = splitLine[commandIndex + 4];
+                groupName = groupName.substring(1, groupName.length() - 1);
+
+                Group group = groupMap.get(groupName);
+
+                if (!personMap.containsKey(buyerName)) {
+                    personMap.put(buyerName, new Person(buyerName));
+                }
+
+                Person buyer = personMap.get(buyerName);
+
+                LocalDate date = getDateFromArgOrDefault(splitLine);
+
+                FriendGroupBalance groupBalance = group.splitPriceAmongGroup(amount, group);
+                for (Person p : group.getGroupMembers()) {
+                    if (p.equals(buyer)) {
+                        continue;
+                    }
+
+                    BigDecimal bd = groupBalance.getGroupBalanceMap().get(p.getName());
+                    bd = bd.setScale(2, RoundingMode.HALF_UP);
+                    Transaction t = new Transaction(date, p, buyer, "borrow", bd);
+                    transactionList.add(t);
+                    //System.out.println(groupBalance.getGroupBalanceMap().get(p.getName()));
+                }
+
+            }
+            continue;
         }
+
+
     }
 
     public static String getInput() throws IOException {
@@ -250,5 +336,23 @@ public class Main {
         }
 
         return pair;
+    }
+
+    public static Group createGroup(List<Person> people) {
+        Group group = new Group();
+        group.createGroup(people);
+        return group;
+    }
+
+    public static LocalDate getDateFromArgOrDefault(String[] args) {
+        LocalDate date;
+
+        // Check if date arg was given
+        if (isFirstArgumentDate(args)) {
+            date = LocalDate.parse(args[0], dateTimeFormatter);
+        } else {
+            date = LocalDate.now();
+        }
+        return date;
     }
 }

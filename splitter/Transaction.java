@@ -1,5 +1,6 @@
 package splitter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Transaction {
@@ -7,9 +8,9 @@ public class Transaction {
     private Person person1;
     private Person person2;
     private final String transactionType;
-    private int amount;
+    private BigDecimal amount;
 
-    public Transaction(LocalDate date, Person person1, Person person2, String transactionType ,int amount) {
+    public Transaction(LocalDate date, Person person1, Person person2, String transactionType , BigDecimal amount) {
         this.date = date;
         this.person1 = person1;
         this.person2 = person2;
@@ -45,11 +46,11 @@ public class Transaction {
         this.person2 = person2;
     }
 
-    public int getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(int amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 
