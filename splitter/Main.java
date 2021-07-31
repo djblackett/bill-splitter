@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class Main {
     static BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
     static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-    static List<String> commandList = new ArrayList<>(Arrays.asList("balance", "borrow", "exit", "help", "repay", "group", "purchase"));
+    static List<String> commandList = new ArrayList<>(Arrays.asList("add", "balance", "borrow", "exit", "help", "remove", "repay", "group", "purchase"));
 
 
     public static void main(String[] args) throws IOException {
@@ -172,6 +172,9 @@ public class Main {
             }
 
 
+
+
+
             //  Borrowing Money
             if (command.equals("borrow") || command.equals("repay")) {
 
@@ -270,6 +273,61 @@ public class Main {
                     }
                     continue;
                 }
+
+                if (splitLine[1].equals("add")) {
+                    String groupName = splitLine[2];
+                    String newMembers = input.split(" \\(")[1];
+                    Group group = groupMap.get(groupName);
+                    String s = newMembers.substring(0, newMembers.length() - 1);
+                    String[] newMemberArray = s.split(", ");
+
+
+                    List<Person> peopleToAdd = parsePersonList(newMemberArray,groupMap, personMap);
+                    group.getGroupMembers().addAll(peopleToAdd);
+                    group.getGroupMembers().sort(new PersonComparator());
+                    //System.out.println(group.getGroupMembers());
+
+                }
+
+                if (splitLine[1].equals("remove")) {
+                    String groupName = splitLine[2];
+                    String newMembers = input.split(" \\(")[1];
+                    Group group = groupMap.get(groupName);
+                    String s = newMembers.substring(0, newMembers.length() - 1);
+                    String[] newMemberArray = s.split(", ");
+                    List<Person> failSafePeopleList = new ArrayList<>();
+
+                    for (int i = 0; i < newMemberArray.length; i++) {
+                        String name = newMemberArray[i];
+
+                        if (name.startsWith("-")) {
+                            name = name.replace("-", "+");
+                        }
+
+                        else if (name.matches("[a-zA-Z]+")) {
+                            name = name.replace("+", "");
+                            failSafePeopleList.add(personMap.get(name));
+                            name = "-" + name;
+                        }
+                        newMemberArray[i] = name;
+                    }
+
+                    //System.out.println(Arrays.toString(newMemberArray));
+                    List<Person> removalList = parsePersonList(newMemberArray, groupMap, personMap);
+
+                    group.getGroupMembers().removeAll(removalList);
+                    failSafePeopleList.stream().forEach(person -> {
+                        if (!group.getGroupMembers().contains(person)) {
+
+                            group.getGroupMembers().add(person);
+                        }
+                    });
+
+
+
+
+                }
+
             }
 
             if (command.equals("purchase")) {

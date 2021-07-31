@@ -10,8 +10,14 @@ public class Group {
     private List<Person> groupMembers = new ArrayList<>();
 
     public void show() {
-        groupMembers.sort(new PersonComparator());
-        groupMembers.forEach(person -> System.out.println(person.getName()));
+        if (groupMembers.size() > 1) {
+            groupMembers.sort(new PersonComparator());
+        }
+        groupMembers.forEach(person -> {
+            if  (person != null) {
+                System.out.println(person.getName());
+            }
+        });
     }
 
     public String getName() {
