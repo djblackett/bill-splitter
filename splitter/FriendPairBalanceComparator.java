@@ -3,6 +3,9 @@ package splitter;
 import java.util.Comparator;
 
 public class FriendPairBalanceComparator implements Comparator<FriendPairBalance> {
+
+    // Sorts first by person owing money, then by person to whom it is owed.
+
     @Override
     public int compare(FriendPairBalance o1, FriendPairBalance o2) {
         int value1 = o1.getPerson1().getName().compareTo(o2.getPerson1().getName());

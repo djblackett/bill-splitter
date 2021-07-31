@@ -1,16 +1,10 @@
 package splitter;
 
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-
 public class Person {
-
 
     private String name;
 
 
-    // final solution for this stage didn't end up using the person's balance field
     public Person(String name) {
         this.name = name;
     }

@@ -3,8 +3,8 @@ package splitter;
 import java.math.BigDecimal;
 
 public class FriendPairBalance {
-    private Person person1;
-    private Person person2;
+    private final Person person1;
+    private final Person person2;
     private BigDecimal balance;
 
     public FriendPairBalance(Person person1, Person person2) {
@@ -23,14 +23,6 @@ public class FriendPairBalance {
 
     public BigDecimal getBalance() {
         return balance;
-    }
-
-    public void setPerson1(Person person1) {
-        this.person1 = person1;
-    }
-
-    public void setPerson2(Person person2) {
-        this.person2 = person2;
     }
 
     public void setBalance(BigDecimal balance) {

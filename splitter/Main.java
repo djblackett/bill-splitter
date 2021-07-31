@@ -4,13 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /*
@@ -50,6 +47,7 @@ public class Main {
                 continue;
             }
 
+            // exit function to break out of loop and quit
             if (input.equals("exit")) {
                 exit();
             }
@@ -92,8 +90,6 @@ public class Main {
                 }
 
 
-                //todo filter to remove if buyer is a group member
-
                 // Iterate through filtered transaction list to calculate all the balances.
                 for (Transaction t : balancePeriodTransactionList) {
                     Person person1 = t.getPerson1();
@@ -133,7 +129,6 @@ public class Main {
                 List<FriendPairBalance> results = friendPairBalances.stream().filter(pair -> pair.getBalance().intValue() != 0).collect(Collectors.toList());
                 FriendPairBalance result;
 
-                //results.forEach(System.out::println);
 
                 // Check if everyone is up to date with payments
                 if (results.isEmpty()) {
@@ -141,24 +136,21 @@ public class Main {
                     continue;
                 }
 
-                // todo check
 
                 // Sorting results first by person owing, then by person owed.
                 results.sort(new FriendPairBalanceComparator());
-                // Must sort results here
-
 
                 // Gather results into a new list for printing all at once
                 List<String> printList = new ArrayList<>();
 
-                for (int i = 0; i < results.size(); i++) {
+                for (FriendPairBalance friendPairBalance : results) {
 
                     // Determine who owes whom the balance
-                    if (results.get(i).getBalance().intValue() > 0) {
-                        result = results.get(i);
-                        printList.add(result.getPerson1().getName() + " owes " + result.getPerson2().getName() + " " + result.getBalance().abs().toString());
+                    if (friendPairBalance.getBalance().intValue() > 0) {
+                        result = friendPairBalance;
+                        printList.add(result.getPerson1().getName() + " owes " + result.getPerson2().getName() + " " + result.getBalance().abs());
                     } else {
-                        result = results.get(i);
+                        result = friendPairBalance;
                         printList.add(result.getPerson2().getName() + " owes " + result.getPerson1().getName() + " " + result.getBalance().abs());
                     }
                 }
@@ -173,9 +165,7 @@ public class Main {
 
 
 
-
-
-            //  Borrowing Money
+            //  Borrowing and repaying money - this only records transactions. Processing occurs in "balance" section above
             if (command.equals("borrow") || command.equals("repay")) {
 
                 // Check for valid args list
@@ -184,7 +174,7 @@ public class Main {
                     continue;
                 }
 
-                // repay money
+                // Parse input args
                 String person1 = splitLine[commandIndex + 1];
                 String person2 = splitLine[commandIndex + 2];
                 String amountString = splitLine[commandIndex + 3];
@@ -226,31 +216,32 @@ public class Main {
 
             if (splitLine[0].equals("group")) {
 
+                // 4 group functions defined below: create, show, add, remove
+
 
                 if (splitLine[1].equals("create")) {
                     commandIndex = Arrays.asList(splitLine).indexOf("create");
                     String groupName = splitLine[commandIndex + 1];
                     //System.out.println(groupName);
 
+                    // Group name must be all caps
                     if (groupName.matches("[A-Z]+")) {
                         String[] splitInputForGroup = input.split(" \\(");
                         String friends = splitInputForGroup[1];
                         friends = friends.substring(0, friends.length() - 1);
                         String[] friendArray = friends.split(", ");
 
-                        // Add everyone to list as is (including group names), then remove people and alter names later
-
-
-                        // make function that returns the list so I can call it for both create and purchase
-
+                        // Get list of people from String[]
+                        // View the function implementation for details
                         List<Person> groupList = parsePersonList(friendArray,groupMap, personMap);
 
+                        // Create group with memberList and add to map for future access
                         Group group = new Group();
                         group.createGroup(groupList);
                         group.setName(groupName);
                         groupMap.put(groupName, group);
 
-
+                        // Ensure each group member is in personMap for future access
                         for (Person p :group.getGroupMembers()) {
                             if (!personMap.containsValue(p)) {
                                 personMap.put(p.getName(), p);
@@ -263,7 +254,10 @@ public class Main {
                     continue;
                 }
 
+
                 if (splitLine[1].equals("show")) {
+
+                    // Print group members
                     String groupName = splitLine[2];
                     if (groupMap.containsKey(groupName)) {
                         Group group = groupMap.get(groupName);
@@ -275,13 +269,15 @@ public class Main {
                 }
 
                 if (splitLine[1].equals("add")) {
+
+                    // Parse string into its components
                     String groupName = splitLine[2];
                     String newMembers = input.split(" \\(")[1];
                     Group group = groupMap.get(groupName);
                     String s = newMembers.substring(0, newMembers.length() - 1);
                     String[] newMemberArray = s.split(", ");
 
-
+                    // Reuse utility function to parse the new member array
                     List<Person> peopleToAdd = parsePersonList(newMemberArray,groupMap, personMap);
                     group.getGroupMembers().addAll(peopleToAdd);
                     group.getGroupMembers().sort(new PersonComparator());
@@ -290,13 +286,16 @@ public class Main {
                 }
 
                 if (splitLine[1].equals("remove")) {
+
+                    // Parse String into its components
                     String groupName = splitLine[2];
                     String newMembers = input.split(" \\(")[1];
                     Group group = groupMap.get(groupName);
                     String s = newMembers.substring(0, newMembers.length() - 1);
                     String[] newMemberArray = s.split(", ");
-                    List<Person> failSafePeopleList = new ArrayList<>();
 
+
+                    // invert the prepended - and + signs in order to reuse the utility function
                     for (int i = 0; i < newMemberArray.length; i++) {
                         String name = newMemberArray[i];
 
@@ -306,32 +305,22 @@ public class Main {
 
                         else if (name.matches("[a-zA-Z]+")) {
                             name = name.replace("+", "");
-                            failSafePeopleList.add(personMap.get(name));
                             name = "-" + name;
                         }
                         newMemberArray[i] = name;
                     }
 
-                    //System.out.println(Arrays.toString(newMemberArray));
+                    // Now the parser returns the list of who we want removed
                     List<Person> removalList = parsePersonList(newMemberArray, groupMap, personMap);
 
+                    // Remove unwanted people
                     group.getGroupMembers().removeAll(removalList);
-                    failSafePeopleList.stream().forEach(person -> {
-                        if (!group.getGroupMembers().contains(person)) {
-
-                            group.getGroupMembers().add(person);
-                        }
-                    });
-
-
-
-
                 }
-
             }
 
             if (command.equals("purchase")) {
-
+                // Parse input into components
+                // itemBought is not actually used yet
                 String buyerName = splitLine[commandIndex + 1];
                 String itemBought = splitLine[commandIndex + 2];
                 BigDecimal amount = new BigDecimal(splitLine[commandIndex + 3]);
@@ -340,45 +329,41 @@ public class Main {
                 groupName = groupName.substring(0, groupName.length() - 1);
                 String[] friendGroup = groupName.split(", ");
 
-                //System.out.println(Arrays.toString(friendGroup));
 
+                // Parse people to split the money amongst
                 List<Person> groupOfFriendsList = parsePersonList(friendGroup, groupMap, personMap);
 
-                //System.out.println(groupOfFriendsList);
                 Group group = new Group();
                 group.setGroupMembers(groupOfFriendsList);
-                //groupMap.put(group.getName(), group);
 
+                // Ensure buyer is in personMap for future access
                 if (!personMap.containsKey(buyerName)) {
                     personMap.put(buyerName, new Person(buyerName));
                 }
-
                 Person buyer = personMap.get(buyerName);
 
-                //groupOfFriendsList.remove(buyer);
-
-                //System.out.println(groupOfFriendsList);
-
+                // Check input for a given date
                 LocalDate date = getDateFromArgOrDefault(splitLine);
 
+                // Get the balances for each group member and create transaction
                 FriendGroupBalance groupBalance = group.splitPriceAmongGroup(amount, group, buyer);
                 for (Person p : group.getGroupMembers()) {
                     if (p.equals(buyer)) {
                         continue;
                     }
 
+                    // Set proper rounding for money amount
                     BigDecimal bd = groupBalance.getGroupBalanceMap().get(p.getName());
                     bd = bd.setScale(2, RoundingMode.HALF_UP);
+
+                    // Create transaction and add to list
                     Transaction t = new Transaction(date, p, buyer, "borrow", bd);
                     transactionList.add(t);
                     //System.out.println(groupBalance.getGroupBalanceMap().get(p.getName()));
                 }
-
             }
             continue;
         }
-
-
     }
 
     public static String getInput() throws IOException {
@@ -412,11 +397,11 @@ public class Main {
 
     public static FriendPairBalance getPairByPeople(Person person1, Person person2, Set<FriendPairBalance> friendPairBalances) {
 
+        // Makes sure that only one friendPairBalance object exists for each pairing of people, regardless of who is person1 or person2
         List<FriendPairBalance> filteredList = friendPairBalances.stream().filter(pair -> pair.getPerson1().equals(person1) && pair.getPerson2().equals(person2) ||
                 pair.getPerson1().equals(person2) && pair.getPerson2().equals(person1)).collect(Collectors.toList());
 
-        //System.out.println("Filtered List: " + filteredList);
-
+        // if no pairing exists, create one
         FriendPairBalance pair;
         if (filteredList.size() == 0) {
             pair = new FriendPairBalance(person1, person2);
@@ -428,16 +413,10 @@ public class Main {
         return pair;
     }
 
-    public static Group createGroup(List<Person> people) {
-        Group group = new Group();
-        group.createGroup(people);
-        return group;
-    }
-
     public static LocalDate getDateFromArgOrDefault(String[] args) {
         LocalDate date;
 
-        // Check if date arg was given
+        // Check if date arg was given. If not, default to today's date.
         if (isFirstArgumentDate(args)) {
             date = LocalDate.parse(args[0], dateTimeFormatter);
         } else {
@@ -447,18 +426,16 @@ public class Main {
     }
 
     public static List<Person> parsePersonList(String[] friendArray, Map<String, Group> groupMap, Map<String, Person> personMap) {
+
+        // Essentially, everyone from the friend array is added to the list initially. This includes group names.
+        // Through a series of filters, we whittle the list down to exactly what is required.
         List<Person> groupPersonList = Arrays.stream(friendArray).map(Person::new).collect(Collectors.toList());
-
-        //System.out.println(groupPersonList);
-        //System.out.println(Arrays.toString(friendArray));
-
-        // Account for + and - signs
-        // -sign for group not done yet
-
 
 
         // Collect indices and modified names to avoid concurrent modification exception
         Map<Integer, String> nameModificationMap = new HashMap<>();
+
+
 
         // remove + signs from person names and add people from groups
         List<Person> collectedPeopleFromGroupsList = new ArrayList<>();
@@ -476,6 +453,8 @@ public class Main {
             }
         });
 
+        // This likely changes the memory reference for the updated person objects to something other than what may be in groupMap
+        // I overrode the equals() and hashCode() methods in the Person class to be able to compare by value
         for (Map.Entry<Integer, String> entry :nameModificationMap.entrySet()) {
             groupPersonList.set(entry.getKey(), new Person(entry.getValue()));
         }
@@ -483,11 +462,9 @@ public class Main {
         groupPersonList.addAll(collectedPeopleFromGroupsList);
 
 
-        //System.out.println("group person list after adding groups: " + groupPersonList);
 
-
+        // Gather names for removal - attempting to avoid concurrent modification exceptions while not forcing the app to use a single thread
         List<Person> groupRemovalNames = new ArrayList<>();
-
 
         groupPersonList.forEach(person -> {
             if (person.getName().matches("-[A-Z][a-z]*") && personMap.containsKey(person.getName().substring(1))) {
@@ -495,11 +472,13 @@ public class Main {
             }
         });
 
+
+        // Remove individual names prepended with "-"
         groupPersonList.removeIf(person -> person.getName().matches("-[A-Z][a-z]*"));
 
 
-
-        // Remove entire group of people - We are treating the group as a person for simplicity
+        // Remove entire group of people - We are treating the group as a person for simplicity.
+        // Finds each member of the group and adds them to removal list
         groupPersonList.forEach(person -> {
 
             if (person.getName().matches("-[A-Z]+")) {
@@ -512,14 +491,12 @@ public class Main {
         });
 
         groupPersonList.removeAll(groupRemovalNames);
-        //System.out.println("group removal names: " + groupRemovalNames);
 
-        // remove group names from list
+
+        // remove any leftover group names from list
         groupPersonList.removeIf(person -> person.getName().matches("[+-]?[A-Z]+"));
 
-       // System.out.println(groupPersonList);
-        //remove duplicates from group
-
+        // Remove any possible duplicates from list - may be unnecessary
         Set<Person> groupSet = new HashSet<>(groupPersonList);
         return new ArrayList<>(groupSet);
     }

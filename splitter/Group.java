@@ -1,9 +1,10 @@
 package splitter;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class Group {
     private String name;
@@ -18,10 +19,6 @@ public class Group {
                 System.out.println(person.getName());
             }
         });
-    }
-
-    public String getName() {
-        return name;
     }
 
     public void setName(String name) {
@@ -41,6 +38,10 @@ public class Group {
     }
 
     public FriendGroupBalance splitPriceAmongGroup(BigDecimal price, Group group1, Person buyer) {
+
+        // Splits the price up amongst group members and takes account of leftover remainder cents
+        // Returns a FriendGroupBalance object, which contains a map of the amount each person owes
+
         BigDecimal priceTimes100 = price.multiply(BigDecimal.valueOf(100));
 
         group1.getGroupMembers().sort(new PersonComparator());
@@ -48,13 +49,6 @@ public class Group {
 
 
         if (group1.groupMembers.size() != 0) {
-
-            int groupSize = groupMembers.size();
-
-            if (group1.groupMembers.contains(buyer)) {
-                groupSize--;
-            }
-
 
             BigDecimal dividedPrice = priceTimes100.divideToIntegralValue(new BigDecimal(group1.groupMembers.size()));
             BigDecimal correctedPrice = dividedPrice.divide(BigDecimal.valueOf(100), RoundingMode.DOWN);
@@ -64,6 +58,7 @@ public class Group {
             BigDecimal equalPricing = correctedPrice.multiply(new BigDecimal(group1.groupMembers.size()));
             BigDecimal remainder = price.subtract(equalPricing);
 
+              // For debugging
 //            System.out.println("EqualPricing: " + equalPricing);
 //            System.out.println("Remainder: " + remainder);
 //            System.out.println("Corrected Price " + correctedPrice);
@@ -75,8 +70,11 @@ public class Group {
 
             if (remainder.equals(new BigDecimal("0.00"))) {
                 return friendGroupBalance;
-            } else {
+            }
 
+            else {
+
+                // Distributes remaining cents among members 1 cent at a time added to each person in order until none remaining
 
                 for (int i = 0; i < group1.groupMembers.size(); i++) {
                     Person person = group1.groupMembers.get(i);
@@ -96,7 +94,7 @@ public class Group {
         return friendGroupBalance;
     }
 
-
+//  Alternate main method for testing - keeping it just in case for now
 //    public static void main(String[] args) {
 //        BigDecimal price = new BigDecimal("10");
 //        price = price.setScale(2, RoundingMode.DOWN);
